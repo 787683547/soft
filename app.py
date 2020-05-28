@@ -128,71 +128,166 @@ class TimeAlloc(db.Model):
 
 
 
-def remove_book(book_id):
-    for book in BOOKS:
-        if book['id'] == book_id:
-            BOOKS.remove(book)
-            return True
-    return False
-
-
-# sanity check route
-@app.route('/ping', methods=['GET'])
-def ping_pong():
-    return jsonify('pong!')
-
-
-@app.route('/books', methods=['GET', 'POST'])
-def all_books():
-    response_object = {'status': 'success'}
+@app.route('/wx/login',methods=['GET','POST'])
+def loginwx():
     if request.method == 'POST':
         post_data = request.get_json()
-        BOOKS.append({
-            'id': uuid.uuid4().hex,
-            'title': post_data.get('title'),
-            'author': post_data.get('author'),
-            'read': post_data.get('read')
-        })
+        name = post_data.get('data')
+        #name = 'hello'
+        res = login(name=name)
+        if res[0]==True:
+            status = res[2]
+            response = {'code':20000,'status':status}
+            return jsonify(response)
+        else:
+            res = register(name=name,status='访客')
+            if res[0]==True:#注册成功
+                response = {'code':20000,'status':'访客'}
+                return jsonify(response)
+            else:
+                response = {'code':60204,'data':'error'}
+                return jsonify(response)
+    return jsonify({'code':60204,'data':'error'})
 
 
 
-        #conn = pymysql.connect(host='127.0.0.1', port=3306,user='root', passwd='123456', db='managesystem',charset='utf8')
-        #cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
-        #sql = "INSERT INTO managesystem.time_allocation (ID_time, ID_visit, time_stay, date_time) VALUES (9,1,1,20000000)"
-        #try:
-        #    row_counts=cursor.execute(sql)
-        #except:
-        #    print("add item fail")
-        #conn.commit()
-        #cursor.close()
-        #conn.close()
 
-        response_object['message'] = 'Book added!'
-    else:
-        response_object['books'] = BOOKS
-    return jsonify(response_object)
-
-
-@app.route('/books/<book_id>', methods=['PUT', 'DELETE'])
-def single_book(book_id):
-    response_object = {'status': 'success'}
-    if request.method == 'PUT':
+@app.route('/vue-admin-template/user/login',methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
         post_data = request.get_json()
-        remove_book(book_id)
-        BOOKS.append({
-            'id': uuid.uuid4().hex,
-            'title': post_data.get('title'),
-            'author': post_data.get('author'),
-            'read': post_data.get('read')
-        })
-        response_object['message'] = 'Book updated!'
-    if request.method == 'DELETE':
-        remove_book(book_id)
-        response_object['message'] = 'Book removed!'
-    return jsonify(response_object)
+        #post_data = {'username':'张西珩','password':'123456'}
+        res = login(name=post_data.get('username'),password=post_data.get('password'))
+        if (res[0] == True):
+            response={"code": 20000,"data": {"token":"admin-token"}}
+            return jsonify(response)
+        else :
+            response = {"code": 60204,'message': '用户名或密码错误'}
+            return jsonify(response)
+    else:
+        return jsonify({"code": 60204,'message': 'error'})
+
+@app.route('/vue-admin-template/user/logout',methods=['POST'])
+def logout():
+    response={"code": 20000,"data": "success"}
+    return jsonify(response)
 
 
-def register(name,status,age,password,date_register=getday_in_int(),time_register=gettime_in_int()):
+
+
+@app.route('/vue-admin-template/getUserinfo/<name>', methods=['GET'])
+def getUserinfo(name):
+    res = checkUser(name)
+    if (res[0] == True):
+        status = res[1].status
+        if (status == '保卫处'):
+            response = {"code": 20000,"data": {'roles': ['admin'],'introduction': 'I am a super administrator',\
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif', 'name': 'Super Admin'}}
+            return jsonify(response)
+        if (status == '门卫'):
+            response = {"code": 20000,"data": {'roles': ['editor'],'introduction': 'I am an editor',\
+            'avatar': 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif', 'name': 'Normal Editor'}}
+            return jsonify(response)
+        else:
+            response = {"code": 60204,'message': 'not admin or editor.'}
+            return jsonify(response)
+    else:
+        response = {"code": 60204,'message': 'Account and password are incorrect.'}
+        return jsonify(response)
+
+
+
+@app.route('/vue-admin-template/charts', methods=['GET'])
+def charts():
+    d7 = datetime.date.today()
+    oneday = datetime.timedelta(days=1)
+    d6 = d7 - oneday
+    d5 = d6 - oneday
+    d4 = d5 - oneday
+    d3 = d4 - oneday
+    d2 = d3 - oneday
+    d1 = d2 - oneday
+    d1=d1.strftime("%Y%m%d")
+    d2=d2.strftime("%Y%m%d")
+    d3=d3.strftime("%Y%m%d")
+    d4=d4.strftime("%Y%m%d")
+    d5=d5.strftime("%Y%m%d")
+    d6=d6.strftime("%Y%m%d")
+    d7=d7.strftime("%Y%m%d")
+    n1 = showCountOneDay(d1)
+    n2 = showCountOneDay(d2)
+    n3 = showCountOneDay(d3)
+    n4 = showCountOneDay(d4)
+    n5 = showCountOneDay(d5)
+    n6 = showCountOneDay(d6)
+    n7 = showCountOneDay(d7)
+    a1 = showCountAll(d1)
+    a2 = showCountAll(d2)
+    a3 = showCountAll(d3)
+    a4 = showCountAll(d4)
+    a5 = showCountAll(d5)
+    a6 = showCountAll(d6)
+    a7 = showCountAll(d7)
+    p1 = showCountInSpecificPlace('一餐',date=getday_in_int())
+    p2 = showCountInSpecificPlace('二餐',date=getday_in_int())
+    p3 = showCountInSpecificPlace('三餐',date=getday_in_int())
+    p4 = showCountInSpecificPlace('四餐',date=getday_in_int())
+    p5 = showCountInSpecificPlace('玉兰苑',date=getday_in_int())
+    p6 = showCountInSpecificPlace('新图',date=getday_in_int())
+    p7 = showCountInSpecificPlace('电院',date=getday_in_int())
+    pa = p1+p2+p3+p4+p5+p6+p7
+    response = {'code':20000,'data':{'line':{'dates':[d1,d2,d3,d4,d5,d6,d7],'newVisits':[n1,n2,n3,n4,n5,n6,n7],\
+        'allVisits':[a1,a2,a3,a4,a5,a6,a7],'panel':{'new':n7,'all':a7,'location':pa},'pie':{'locationName':\
+        ['一餐','二餐','三餐','四餐','玉兰苑','新图','电院'],'peopleNum':[p1,p2,p3,p4,p5,p6,p7]}}}}
+    return jsonify(response)
+
+
+@app.route('/vue-admin-template/usertable', methods=['GET'])
+def usertable():
+    users = showVisitorNow()
+    length = len(users)
+    items =[]
+    for user in users:
+        id=user.ID_person
+        name=RegInfo.query.filter_by(ID_person=id).first().name
+        age = RegInfo.query.filter_by(ID_person=id).first().age
+        ds = str(user.date_start) +' ' + str(user.time_start)
+        ds2 = datetime.datetime.strptime(ds,"%Y%m%d %H%M")
+        dn = str(user.date_current) + ' ' + str(user.time_current)
+        dn = datetime.datetime.strptime(dn,"%Y%m%d %H%M")
+        timeused = dn-ds2
+        secondsused = timeused.total_seconds()
+        secondsall= int(user.time_stay/100)*3600 + (user.time_stay%100)*60
+        if(secondsused<secondsall):
+            sta = '正常'
+        else:
+            sta = '过期'
+        items.append({'ID':id,"name":name,"startTime":ds,'status':sta,'age':age})
+
+    response = {'code': 20000,'data': {'total':length,'items':items}}
+    return jsonify(response)
+
+@app.route('/vue-admin-template/locationtable', methods=['GET'])
+def locationtable():
+    items=[]
+    places = {'一餐','二餐','三餐','四餐','玉兰苑','新图','电院'}
+    length = len(places)
+    for place in places:
+        num = showCountInSpecificPlace(place)
+        alertNum = 50
+        if (num>alertNum):
+            status = '警戒'
+        else:
+            status = '正常'
+        items.append({'locationName':place,'status':status,'enterNumber':num,'alertNumber':alertNum})
+
+    response={'code':20000,'data':{'total':length,'items':items}}
+    return jsonify(response)
+
+
+
+
+def register(name,status='访客',age=20,password='123456',date_register=getday_in_int(),time_register=gettime_in_int()):
     if (RegInfo.query.filter_by(name=name).count()>0):
         return (False,"name already registered")
     new_user = RegInfo(name=name,status=status,age=age,date_register=date_register,time_register=time_register,password=password)
@@ -211,23 +306,16 @@ def checkUser(name):
     user = RegInfo.query.filter_by(name=name).first()
     return (True, user)
 
-def login(name,status='访客',age=0,password='123456'):
+def login(name,password='123456'):
     res1=checkUser(name)
     if (res1[0]==False):#用户不存在
-        res = register(name,status=status,age=age,password=password)
-        if (res[0] == True):
-            return (True,res[1].ID_person)
-        else:
-            return (False,"login error")
+        return (False,"no this user")
     else:
-        a = (password == res1[1].password)
-        b = (status == res1[1].status)
-        if a and b:
-            return (True,res1[1].ID_person)
-        elif (not a):
-            return (False,"password error")
+        if (password == res1[1].password):
+            return (True,res1[1].ID_person,res1[1].status)
         else:
-            return (False,"status error")
+            return (False,"password error")
+
 
 def endVisitByName(name,longitude_current=121.426365,\
                    latitude_current=31.01966,date_current=getday_in_int(),time_current=gettime_in_int()):
@@ -299,8 +387,8 @@ def startVisit(ID_person,longitude_current='121.426365',\
         #except:
             #return (False,"start new visit failed")
 
-def updateVisitLocation(ID_person,longitude_current=121.426365,\
-                   latitude_current=31.01966,date_current=getday_in_int(),time_current=gettime_in_int()):
+def updateVisitLocation(ID_person,longitude_current='121.426365',\
+                   latitude_current='31.01966',date_current=getday_in_int(),time_current=gettime_in_int()):
     if(LocCurr.query.filter_by(ID_person=ID_person).count()!=1):
         return (False,"no visit now")
     currentuser = LocCurr.query.filter_by(ID_person=ID_person).first()
@@ -398,9 +486,26 @@ def showCountToday():
     result = cursor.fetchall()
     return len(result)
 
+def showCountOneDay(date=getday_in_int()):
+    sql = 'SELECT count(*) FROM managesystem.location_history where date_history='+str(date)+' group by ID_visit'
+    cursor = db.session.execute(sql)
+    result = cursor.fetchall()
+    return len(result)
+
+def showCountAll(date=getday_in_int()):
+    sql = 'SELECT count(*) FROM managesystem.location_history where date_history<='+str(date)+' group by ID_visit'
+    cursor = db.session.execute(sql)
+    result = cursor.fetchall()
+    return len(result)
+
+
 def showCountInOnePlaceNow(longitude_low,longitude_high,latitude_low,latitude_high):
-    return LocCurr.query.filter(and_(LocCurr.longitude_current.between(longitude_low,longitude_high),\
-                                   LocCurr.latitude_current.between(latitude_low,latitude_high))).count()
+    sql = 'SELECT * FROM managesystem.location_current where '\
+          +' longitude_current between '+str(longitude_low)+' and '+str(longitude_high)+' and latitude_current between '\
+          +str(latitude_low)+' and '+str(latitude_high)
+    cursor = db.session.execute(sql)
+    result = cursor.fetchall()
+    return len(result)
 
 def showCountInOnePlace(longitude_low,longitude_high,latitude_low,latitude_high,date=getday_in_int()):
     sql = 'SELECT count(*) FROM managesystem.location_history where date_history='+date\
@@ -409,6 +514,46 @@ def showCountInOnePlace(longitude_low,longitude_high,latitude_low,latitude_high,
     cursor = db.session.execute(sql)
     result = cursor.fetchall()
     return len(result)
+
+def showCountInSpecificPlace(place,date=getday_in_int()):
+    if (place == '一餐'):
+        return showCountInOnePlace(121.42617,121.427953,31.023737,31.024749,date)
+    if (place == '二餐'):
+        return showCountInOnePlace(121.431071,121.432171,31.024551,31.025282,date)
+    if (place == '三餐'):
+        return showCountInOnePlace(121.430149,121.430878,31.027515,31.028196,date)
+    if (place == '四餐'):
+        return showCountInOnePlace(121.42247,121.42306,31.026823,31.027555,date)
+    if (place == '五餐'):
+        return showCountInOnePlace(121.436153,121.437178,31.025269,31.025932,date)
+    if (place == '六餐'):
+        return showCountInOnePlace(121.439853,121.440223,31.031044,31.031394,date)
+    if (place == '新图'):
+        return showCountInOnePlace(121.431277,121.43368,31.027301,31.028828,date)
+    if (place == '玉兰苑'):
+        return showCountInOnePlace(121.426417,121.427028,31.025246,31.025687,date)
+    if (place == '电院'):
+        return showCountInOnePlace(121.435722,121.43859,31.025841,31.028192,date)
+
+def showCountInSpecificPlaceNow(place):
+    if (place == '一餐'):
+        return showCountInOnePlaceNow(121.42617,121.427953,31.023737,31.024749)
+    if (place == '二餐'):
+        return showCountInOnePlaceNow(121.431071,121.432171,31.024551,31.025282)
+    if (place == '三餐'):
+        return showCountInOnePlaceNow(121.430149,121.430878,31.027515,31.028196)
+    if (place == '四餐'):
+        return showCountInOnePlaceNow(121.42247,121.42306,31.026823,31.027555)
+    if (place == '五餐'):
+        return showCountInOnePlaceNow(121.436153,121.437178,31.025269,31.025932)
+    if (place == '六餐'):
+        return showCountInOnePlaceNow(121.439853,121.440223,31.031044,31.031394)
+    if (place == '新图'):
+        return showCountInOnePlaceNow(121.431277,121.43368,31.027301,31.028828)
+    if (place == '玉兰苑'):
+        return showCountInOnePlaceNow(121.426417,121.427028,31.025246,31.025687)
+    if (place == '电院'):
+        return showCountInOnePlaceNow(121.435722,121.43859,31.025841,31.028192)
 
 def showTimeStay(ID_visit,date=getday_in_int()):
     getins = LocHist.query.filter(and_(LocHist.date_history==date,LocHist.flag=='进入',LocHist.ID_visit==ID_visit)).all()
@@ -431,35 +576,7 @@ def showTimeAlloc(date=getday_in_int()):
 if __name__ == '__main__':
     print(getday_in_int())
     print(gettime_in_int())
-    '''
-    print(login(name='梁力佳',status='保卫处',password='123456'))
-    print(login('张家乐',status='保卫处',password='123456'))
-    print(login('张西珩',status='门卫',password='123456'))
-    print(login('魏上清'))
-    print(login('陆天和'))
-    print(login('谢禹翀'))
-    print(login('访客甲'))
-    print(login('访客乙'))
-    print(login('门卫甲',status='门卫',password='123456'))
-    print(login('访客丙',password='123456'))
-    '''
-
-
-    #print(showCountInOnePlace(120,130,20,40))
-    #print(showCountInOnePlace(120,130,20,33))
-    #print(showCountInOnePlaceNow(120,130,20,33))
-    #print(endVisit(6))
-    #print(updateVisitLocation(5,121.4271,31.0144))
-    #print(updateVisitLocation(6,121.4217,31.0349))
-    #print(startVisit(5,121.4405,31.0249,100))
-    #print(startVisitByName('谢禹翀',121.4405,31.0249,130))
-    #print(startVisit('4','121.42078','31.030427',time_stay='400'))
-    #print(endVisit('5',time_current=2100))
-
-    #print(endVisit('4'))
-    #print(endVisit('5'))
-    #print((endVisitByName('魏上清')))
-    #print(addTimeAllocByID(4,40))
-
-
-    #app.run()
+    #a='999 and 1=1'
+    #print(RegInfo.query.filter_by(ID_person=a))
+    print(register(name='哔了狗了',status='门卫',password='123456'))
+    app.run()
